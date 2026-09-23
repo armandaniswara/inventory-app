@@ -116,6 +116,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 20257
           script: |
             cd /opt/inventory-app
             docker compose -f docker-compose.prod.yml pull
