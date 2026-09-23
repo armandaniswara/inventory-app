@@ -16,7 +16,7 @@ services:
       retries: 5
 
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-org/inventory-app}:latest
+    image: ghcr.io/armandaniswara/inventory-app:latest
     container_name: inventory-app
     restart: unless-stopped
     depends_on:

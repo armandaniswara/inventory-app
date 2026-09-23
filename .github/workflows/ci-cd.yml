@@ -102,6 +102,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Save Docker image
+        run: docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest | gzip > /tmp/inventory-app.tar.gz
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-app-image
+          path: /tmp/inventory-app.tar.gz
+          retention-days: 1
+
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
@@ -110,7 +120,23 @@ jobs:
     environment: production
 
     steps:
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: inventory-app-image
+          path: /tmp
+
       - name: Deploy via SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 20257
+          source: "/tmp/inventory-app.tar.gz"
+          target: "/tmp/inventory-app.tar.gz"
+
+      - name: Start container on server
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -118,7 +144,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 20257
           script: |
+            docker load < /tmp/inventory-app.tar.gz
+            rm -f /tmp/inventory-app.tar.gz
             cd /opt/inventory-app
-            docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
+            docker ps
